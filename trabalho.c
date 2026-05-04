@@ -593,11 +593,6 @@ void candidatarAluno() {
         return;
     }
 
-    if(usuarios[usuarioLogado].ehExAluno != 1) {
-        printf("Apenas ex-alunos podem se candidatar a vagas.\n");
-        return;
-    }
-
     if(totalCandidaturas >= MAX_CANDIDATURAS) {
         printf("Limite de candidaturas atingido.\n");
         return;
