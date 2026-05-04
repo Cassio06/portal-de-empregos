@@ -28,13 +28,9 @@ struct Vaga {
 
 struct Candidatura {
     int id;
-    char empresaEmail[50];
-    char area[50];
-    char descricao[200];
-    char requisitos[200];
-    int ativa;
     int idVaga;
-    char alunoEmail;
+    int ativa;
+    char alunoEmail[50];
     char status[30];
 };
 
