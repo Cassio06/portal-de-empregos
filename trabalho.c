@@ -346,7 +346,7 @@ void menuAluno() {
                 break;
 
             case 3:
-                verCandidatos();
+                candidatarAluno();
                 break;
 
             case 0:
