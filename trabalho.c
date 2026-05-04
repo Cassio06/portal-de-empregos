@@ -33,6 +33,8 @@ void cadastro(int tipo);
 int login(int tipo);
 void criarAdminPadrao();
 void menuAdmin();
+void menuEmpresa();
+void menuAluno();
 int validarEmail(char email[]);
 int emailExiste(char email[]);
 
@@ -187,6 +189,80 @@ int login(int tipo) {
     return 0;
 }
 
+// ===== MENU EMPRESA =====
+void menuEmpresa() {
+    int opcao;
+
+    do {
+        printf("\n===== MENU EMPRESA =====\n");
+        printf("1 - Criar vaga\n");
+        printf("2 - Listar vagas\n");
+        printf("3 - Ver candidatos\n");
+        printf("0 - Logout\n");
+        printf("Escolha: ");
+        scanf("%d", &opcao);
+
+        switch(opcao) {
+            case 1:
+                printf("Funcao criar vaga ainda nao implementada.\n");
+                break;
+
+            case 2:
+                printf("Funcao listar vagas ainda nao implementada.\n");
+                break;
+
+            case 3:
+                printf("Funcao ver candidatos ainda nao implementada.\n");
+                break;
+
+            case 0:
+                printf("Saindo da conta da empresa...\n");
+                break;
+
+            default:
+                printf("Opcao invalida!\n");
+        }
+
+    } while(opcao != 0);
+}
+
+// ===== MENU ALUNO =====
+void menuAluno() {
+    int opcao;
+
+    do {
+        printf("\n===== MENU ALUNO =====\n");
+        printf("1 - Ver vagas\n");
+        printf("2 - Buscar vagas\n");
+        printf("3 - Se candidatar\n");
+        printf("0 - Logout\n");
+        printf("Escolha: ");
+        scanf("%d", &opcao);
+
+        switch(opcao) {
+            case 1:
+                printf("Funcao ver vagas ainda nao implementada.\n");
+                break;
+
+            case 2:
+                printf("Funcao buscar vagas ainda nao implementada.\n");
+                break;
+
+            case 3:
+                printf("Funcao candidatura ainda nao implementada.\n");
+                break;
+
+            case 0:
+                printf("Saindo da conta do aluno...\n");
+                break;
+
+            default:
+                printf("Opcao invalida!\n");
+        }
+
+    } while(opcao != 0);
+}
+
 // ===== MENU ADMIN =====
 void menuAdmin() {
     int opcao;
@@ -244,10 +320,14 @@ void menuLoginCadastro(int tipo) {
 
                     if(tipo == ADMIN) {
                         menuAdmin();
-                    } else if(tipo == EMPRESA) {
+                    } 
+                    else if(tipo == EMPRESA) {
                         printf("Bem-vindo, Empresa!\n");
-                    } else {
+                        menuEmpresa();
+                    } 
+                    else {
                         printf("Bem-vindo, Aluno!\n");
+                        menuAluno();
                     }
 
                 } else {
