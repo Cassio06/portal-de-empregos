@@ -5,10 +5,40 @@
 #define MAX 100
 #define ARQUIVO "usuarios.dat"
 
+//Gerenciamento de vagas e sistema de candidatura 
+#define ARQUIVO_VAGAS "vagas.dat"
+#define ARQUIVO_CANDIDATURAS "candidaturas.dat"
+#define MAX_CANDIDATURAS 300
+
 // Tipos de usuário
 #define EMPRESA 1
 #define ALUNO 2
 #define ADMIN 3
+
+// Estruturas
+struct Vaga {
+    int id;
+    char titulo[80];
+    char empresaEmail[50];
+    char area[50];
+    char descricao[200];
+    char requisitos[200];
+    int ativa;  
+};
+
+struct Candidatura {
+    int id;
+    int idVaga;
+    int ativa;
+    char alunoEmail[50];
+    char status[30];
+};
+
+struct Vaga vagas[MAX];
+int totalVagas = 0;
+
+struct Candidatura candidaturas[MAX_CANDIDATURAS];
+int totalCandidaturas = 0;
 
 struct Usuario {
     char email[50];
@@ -23,31 +53,59 @@ struct Usuario {
 
 struct Usuario usuarios[MAX];
 int totalUsuarios = 0;
+int usuarioLogado = -1;
 
-// ===== PROTÓTIPOS =====
+// ===== PROTÓTIPOS - USUÁRIOS =====
 void carregarUsuarios();
 void salvarUsuarios();
-void menuPrincipal();
-void menuLoginCadastro(int tipo);
+void criarAdminPadrao();
 void cadastro(int tipo);
 int login(int tipo);
-void criarAdminPadrao();
+int validarEmail(char email[]);
+int emailExiste(char email[]);
+
+
+// ===== PROTÓTIPOS - MENUS =====
+void menuPrincipal();
+void menuLoginCadastro(int tipo);
 void menuAdmin();
 void menuEmpresa();
 void menuAluno();
-int validarEmail(char email[]);
-int emailExiste(char email[]);
+
+
+// ===== PROTÓTIPOS - VAGAS =====
+void carregarVagas();
+void salvarVagas();
+void criarVaga();
+void listarVagas();
+void buscarVagas();
+int vagaExiste(int idVaga);
+
+
+// ===== PROTÓTIPOS - CANDIDATURAS =====
+void carregarCandidaturas();
+void salvarCandidaturas();
+void candidatarAluno();
+void verCandidatos();
+int jaCandidatado(int idVaga, char alunoEmail[]);
 
 // ===== MAIN =====
 int main() {
     carregarUsuarios();
+    carregarVagas();
+    carregarCandidaturas();
+
     criarAdminPadrao();
     menuPrincipal();
+
     salvarUsuarios();
+    salvarVagas();
+    salvarCandidaturas();
+    
     return 0;
 }
 
-// ===== ARQUIVO =====
+// ===== ARQUIVO DE USUARIO =====
 void carregarUsuarios() {
     FILE *f = fopen(ARQUIVO, "rb");
     if(f == NULL) return;
@@ -66,7 +124,44 @@ void salvarUsuarios() {
     fwrite(usuarios, sizeof(struct Usuario), totalUsuarios, f);
     fclose(f);
 }
+// ===== ARQUIVO DE VAGAS =====
+void carregarVagas() {
+    FILE *f = fopen(ARQUIVO_VAGAS, "rb");
+    if(f == NULL) return;
 
+    totalVagas = fread(vagas, sizeof(struct Vaga), MAX, f);
+    fclose(f);
+}
+
+void salvarVagas() {
+    FILE *f = fopen(ARQUIVO_VAGAS, "wb");
+    if(f == NULL) {
+        printf("Erro ao salvar vagas!\n");
+        return;
+    }
+
+    fwrite(vagas, sizeof(struct Vaga), totalVagas, f);
+    fclose(f);
+}
+// ===== ARQUIVO DE CANDIDATURA =====
+void carregarCandidaturas() {
+    FILE *f = fopen(ARQUIVO_CANDIDATURAS, "rb");
+    if(f == NULL) return;
+
+    totalCandidaturas = fread(candidaturas, sizeof(struct Candidatura), MAX_CANDIDATURAS, f);
+    fclose(f);
+}
+
+void salvarCandidaturas() {
+    FILE *f = fopen(ARQUIVO_CANDIDATURAS, "wb");
+    if(f == NULL) {
+        printf("Erro ao salvar candidaturas!\n");
+        return;
+    }
+
+    fwrite(candidaturas, sizeof(struct Candidatura), totalCandidaturas, f);
+    fclose(f);
+}
 // ===== VALIDAÇÃO =====
 int validarEmail(char email[]) {
     return strchr(email, '@') != NULL;
@@ -182,10 +277,11 @@ int login(int tipo) {
         if(strcmp(email, usuarios[i].email) == 0 &&
            strcmp(senha, usuarios[i].senha) == 0 &&
            usuarios[i].tipo == tipo) {
+            usuarioLogado = i;
             return 1;
         }
     }
-
+    usuarioLogado = -1; 
     return 0;
 }
 
@@ -204,18 +300,19 @@ void menuEmpresa() {
 
         switch(opcao) {
             case 1:
-                printf("Funcao criar vaga ainda nao implementada.\n");
+                criarVaga();
                 break;
 
             case 2:
-                printf("Funcao listar vagas ainda nao implementada.\n");
+                listarVagas();
                 break;
 
             case 3:
-                printf("Funcao ver candidatos ainda nao implementada.\n");
+                verCandidatos();
                 break;
 
             case 0:
+                usuarioLogado = -1;
                 printf("Saindo da conta da empresa...\n");
                 break;
 
@@ -241,18 +338,19 @@ void menuAluno() {
 
         switch(opcao) {
             case 1:
-                printf("Funcao ver vagas ainda nao implementada.\n");
+                listarVagas();
                 break;
 
             case 2:
-                printf("Funcao buscar vagas ainda nao implementada.\n");
+                buscarVagas();
                 break;
 
             case 3:
-                printf("Funcao candidatura ainda nao implementada.\n");
+                candidatarAluno();
                 break;
 
             case 0:
+                usuarioLogado = -1;
                 printf("Saindo da conta do aluno...\n");
                 break;
 
@@ -389,4 +487,191 @@ void menuPrincipal() {
         }
 
     } while(opcao != 0);
+}
+// ===== FUNÇÃO DE CRIAR VAGAS =====
+void criarVaga(){
+    if(totalVagas >= MAX) {
+        printf("Limite de vagas atingido.\n");
+        return;
+    }
+
+    if(usuarioLogado == -1 || usuarios[usuarioLogado].tipo != EMPRESA) {
+        printf("Apenas empresas podem criar vagas.\n");
+        return;
+    }
+
+    vagas[totalVagas].id = totalVagas + 1;
+
+    strcpy(vagas[totalVagas].empresaEmail, usuarios[usuarioLogado].email);
+
+    printf("Titulo da vaga: ");
+    scanf(" %[^\n]", vagas[totalVagas].titulo);
+
+    printf("Area da vaga: ");
+    scanf(" %[^\n]", vagas[totalVagas].area);
+
+    printf("Descricao da vaga: ");
+    scanf(" %[^\n]", vagas[totalVagas].descricao);
+
+    printf("Requisitos da vaga: ");
+    scanf(" %[^\n]", vagas[totalVagas].requisitos);
+
+    vagas[totalVagas].ativa = 1;
+
+    totalVagas++;
+    salvarVagas();
+
+    printf("Vaga cadastrada com sucesso!\n");
+
+}
+// ===== FUNÇÃO DE LISTAR VAGAS =====
+void listarVagas() {
+    if(totalVagas == 0) {
+        printf("Nenhuma vaga cadastrada.\n");
+        return;
+    }
+
+    for(int i = 0; i < totalVagas; i++) {
+        if(vagas[i].ativa == 1) {
+            printf("\nID: %d\n", vagas[i].id);
+            printf("Titulo: %s\n", vagas[i].titulo);
+            printf("Empresa: %s\n", vagas[i].empresaEmail);
+            printf("Area: %s\n", vagas[i].area);
+            printf("Descricao: %s\n", vagas[i].descricao);
+            printf("Requisitos: %s\n", vagas[i].requisitos);
+        }
+    }
+}
+// ===== FUNÇÃO DE BUSCAR VAGAS =====
+void buscarVagas() {
+    char areaBusca[50];
+    int encontrou = 0;
+
+    printf("Digite a area desejada: ");
+    scanf(" %[^\n]", areaBusca);
+
+    for(int i = 0; i < totalVagas; i++) {
+        if(vagas[i].ativa == 1 && strcmp(vagas[i].area, areaBusca) == 0) {
+            printf("\nID: %d\n", vagas[i].id);
+            printf("Titulo: %s\n", vagas[i].titulo);
+            printf("Empresa: %s\n", vagas[i].empresaEmail);
+            printf("Descricao: %s\n", vagas[i].descricao);
+            printf("Requisitos: %s\n", vagas[i].requisitos);
+            encontrou = 1;
+        }
+    }
+
+    if(!encontrou) {
+        printf("Nenhuma vaga encontrada nessa area.\n");
+    }
+}
+int vagaExiste(int idVaga) {
+    for(int i = 0; i < totalVagas; i++) {
+        if(vagas[i].id == idVaga && vagas[i].ativa == 1) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int jaCandidatado(int idVaga, char alunoEmail[]) {
+    for(int i = 0; i < totalCandidaturas; i++) {
+        if(candidaturas[i].idVaga == idVaga &&
+           strcmp(candidaturas[i].alunoEmail, alunoEmail) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// ===== FUNÇÃO DE CADASTRO DE ALUNO =====
+void candidatarAluno() {
+    int idVaga;
+
+    if(usuarioLogado == -1 || usuarios[usuarioLogado].tipo != ALUNO) {
+        printf("Apenas alunos/ex-alunos podem se candidatar.\n");
+        return;
+    }
+
+    if(totalCandidaturas >= MAX_CANDIDATURAS) {
+        printf("Limite de candidaturas atingido.\n");
+        return;
+    }
+
+    listarVagas();
+
+    printf("\nDigite o ID da vaga desejada: ");
+    scanf("%d", &idVaga);
+
+    if(!vagaExiste(idVaga)) {
+        printf("Vaga inexistente ou inativa.\n");
+        return;
+    }
+
+    if(jaCandidatado(idVaga, usuarios[usuarioLogado].email)) {
+        printf("Voce ja se candidatou a essa vaga.\n");
+        return;
+    }
+
+    candidaturas[totalCandidaturas].id = totalCandidaturas + 1;
+    candidaturas[totalCandidaturas].idVaga = idVaga;
+    strcpy(candidaturas[totalCandidaturas].alunoEmail, usuarios[usuarioLogado].email);
+    strcpy(candidaturas[totalCandidaturas].status, "Enviada");
+
+    totalCandidaturas++;
+    salvarCandidaturas();
+
+    printf("Candidatura realizada com sucesso!\n");
+}
+// ===== FUNÇÃO DE VER CANDIDATOS =====
+void verCandidatos() {
+    int idVaga;
+    int encontrouVaga = 0;
+    int encontrouCandidato = 0;
+
+    if(usuarioLogado == -1 || usuarios[usuarioLogado].tipo != EMPRESA) {
+        printf("Apenas empresas podem ver candidatos.\n");
+        return;
+    }
+
+    printf("\nSuas vagas:\n");
+
+    for(int i = 0; i < totalVagas; i++) {
+        if(strcmp(vagas[i].empresaEmail, usuarios[usuarioLogado].email) == 0 &&
+           vagas[i].ativa == 1) {
+            printf("ID: %d | Titulo: %s\n", vagas[i].id, vagas[i].titulo);
+            encontrouVaga = 1;
+        }
+    }
+
+    if(!encontrouVaga) {
+        printf("Voce ainda nao cadastrou vagas.\n");
+        return;
+    }
+
+    printf("\nDigite o ID da vaga para ver candidatos: ");
+    scanf("%d", &idVaga);
+
+    for(int i = 0; i < totalVagas; i++) {
+        if(vagas[i].id == idVaga &&
+           strcmp(vagas[i].empresaEmail, usuarios[usuarioLogado].email) == 0) {
+            encontrouVaga = 1;
+            break;
+        }
+    }
+
+    printf("\nCandidatos:\n");
+
+    for(int i = 0; i < totalCandidaturas; i++) {
+        if(candidaturas[i].idVaga == idVaga) {
+            printf("Aluno: %s | Status: %s\n",
+                   candidaturas[i].alunoEmail,
+                   candidaturas[i].status);
+            encontrouCandidato = 1;
+        }
+    }
+
+    if(!encontrouCandidato) {
+        printf("Nenhum candidato para esta vaga.\n");
+    }
 }
