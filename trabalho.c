@@ -100,6 +100,12 @@ int jaCandidatado(int idVaga, char alunoEmail[]);
 void esperar(int milissegundos);
 void limparTela();
 void barraCarregamento(char mensagem[]);
+void limparBuffer();
+int textoVazio(char texto[]);
+void removerQuebraLinha(char texto[]);
+void lerTextoObrigatorio(char mensagem[], char destino[], int tamanho);
+int lerInteiro(char mensagem[], int min, int max);
+void executarTestes();
 
 // ===== UTILITÁRIOS =====
 void esperar(int milissegundos) {
@@ -132,6 +138,77 @@ void barraCarregamento(char mensagem[]) {
 
     printf("]\n");
     esperar(300);
+}
+
+void limparBuffer() {
+    int c;
+    while((c = getchar()) != '\n' && c != EOF);
+}
+
+void removerQuebraLinha(char texto[]) {
+    texto[strcspn(texto, "\n")] = '\0';
+}
+
+int textoVazio(char texto[]) {
+    for(int i = 0; texto[i] != '\0'; i++) {
+        if(!isspace((unsigned char)texto[i])) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+void lerTextoObrigatorio(char mensagem[], char destino[], int tamanho) {
+    int textoGrande;
+
+    do {
+        textoGrande = 0;
+        printf("%s", mensagem);
+
+        if(fgets(destino, tamanho, stdin) == NULL) {
+            destino[0] = '\0';
+        }
+
+        // Se o usuario digitar mais caracteres do que o limite,
+        // o fgets corta o texto. Nesse caso, limpamos o restante
+        // que ficou no buffer para nao quebrar a proxima leitura.
+        if(strchr(destino, '\n') == NULL) {
+            textoGrande = 1;
+            limparBuffer();
+        }
+
+        removerQuebraLinha(destino);
+
+        if(textoVazio(destino)) {
+            printf("Campo obrigatorio! Digite novamente.\n");
+        } else if(textoGrande) {
+            printf("Texto muito grande! Digite no maximo %d caracteres.\n", tamanho - 2);
+        }
+
+    } while(textoVazio(destino) || textoGrande);
+}
+
+int lerInteiro(char mensagem[], int min, int max) {
+    int valor;
+    int resultado;
+
+    do {
+        printf("%s", mensagem);
+        resultado = scanf("%d", &valor);
+
+        if(resultado != 1) {
+            printf("Entrada invalida! Digite apenas numeros.\n");
+            limparBuffer();
+        } else if(valor < min || valor > max) {
+            printf("Valor invalido! Digite entre %d e %d.\n", min, max);
+            limparBuffer();
+        } else {
+            limparBuffer();
+            return valor;
+        }
+
+    } while(1);
 }
 
 void strToLower(char *dest, const char *src, int maxLen) {
@@ -259,7 +336,26 @@ void salvarCandidaturas() {
 
 // ===== VALIDAÇÃO =====
 int validarEmail(char email[]) {
-    return strchr(email, '@') != NULL;
+    char *arroba = strchr(email, '@');
+    char *ponto = strrchr(email, '.');
+
+    if(textoVazio(email)) {
+        return 0;
+    }
+
+    if(arroba == NULL || ponto == NULL) {
+        return 0;
+    }
+
+    if(arroba == email || *(arroba + 1) == '\0') {
+        return 0;
+    }
+
+    if(ponto < arroba || *(ponto + 1) == '\0') {
+        return 0;
+    }
+
+    return 1;
 }
 
 int emailExiste(char email[]) {
@@ -313,11 +409,10 @@ void cadastro(int tipo) {
     printf("\n===== CADASTRO =====\n");
 
     do {
-        printf("Email: ");
-        scanf("%49s", email);
+        lerTextoObrigatorio("Email: ", email, 50);
 
         if(!validarEmail(email)) {
-            printf("Email invalido! Precisa conter '@'\n");
+            printf("Email invalido! Use um formato como nome@email.com e respeite o limite de caracteres.\n");
         } else if(emailExiste(email)) {
             printf("Email ja cadastrado!\n");
         }
@@ -326,27 +421,23 @@ void cadastro(int tipo) {
 
     strcpy(usuarios[totalUsuarios].email, email);
 
-    printf("Senha: ");
-    scanf("%19s", usuarios[totalUsuarios].senha);
+    lerTextoObrigatorio("Senha: ", usuarios[totalUsuarios].senha, 20);
 
     usuarios[totalUsuarios].tipo = tipo;
 
-    printf("Area de atuacao: ");
-    scanf(" %49[^\n]", usuarios[totalUsuarios].area);
+    lerTextoObrigatorio("Area de atuacao: ", usuarios[totalUsuarios].area, 50);
 
     if(tipo == ALUNO) {
         int opcao;
 
-        printf("1 - Aluno\n2 - Ex-aluno\nEscolha: ");
-        scanf("%d", &opcao);
+        opcao = lerInteiro("1 - Aluno\n2 - Ex-aluno\nEscolha: ", 1, 2);
 
         if(opcao == 2) {
             usuarios[totalUsuarios].ehExAluno = 1;
             usuarios[totalUsuarios].periodo = -1;
         } else {
             usuarios[totalUsuarios].ehExAluno = 0;
-            printf("Periodo atual: ");
-            scanf("%d", &usuarios[totalUsuarios].periodo);
+            usuarios[totalUsuarios].periodo = lerInteiro("Periodo atual: ", 1, 12);
         }
     } else {
         usuarios[totalUsuarios].ehExAluno = -1;
@@ -370,11 +461,9 @@ int login(int tipo) {
 
     printf("\n===== LOGIN =====\n");
 
-    printf("Email: ");
-    scanf("%49s", email);
+    lerTextoObrigatorio("Email: ", email, 50);
 
-    printf("Senha: ");
-    scanf("%19s", senha);
+    lerTextoObrigatorio("Senha: ", senha, 20);
 
     barraCarregamento("Processando login");
 
@@ -402,9 +491,9 @@ void menuPrincipal() {
         printf("1 - Empresa\n");
         printf("2 - Aluno/Ex-aluno\n");
         printf("3 - Admin\n");
+        printf("9 - Executar testes\n");
         printf("0 - Sair\n");
-        printf("Escolha: ");
-        scanf("%d", &opcao);
+        opcao = lerInteiro("Escolha: ", 0, 9);
 
         switch(opcao) {
             case 1:
@@ -420,6 +509,12 @@ void menuPrincipal() {
             case 3:
                 barraCarregamento("Carregando area administrativa");
                 menuLoginCadastro(ADMIN);
+                break;
+
+            case 9:
+                executarTestes();
+                printf("\nPressione ENTER para voltar...");
+                getchar();
                 break;
 
             case 0:
@@ -446,8 +541,7 @@ void menuLoginCadastro(int tipo) {
         printf("1 - Login\n");
         printf("2 - Cadastro\n");
         printf("0 - Voltar\n");
-        printf("Escolha: ");
-        scanf("%d", &opcao);
+        opcao = lerInteiro("Escolha: ", 0, 9);
 
         switch(opcao) {
             case 1:
@@ -505,8 +599,7 @@ void menuEmpresa() {
         printf("3 - Ver candidatos\n");
         printf("4 - Selecionar candidato\n");
         printf("0 - Logout\n");
-        printf("Escolha: ");
-        scanf("%d", &opcao);
+        opcao = lerInteiro("Escolha: ", 0, 9);
 
         switch(opcao) {
             case 1:
@@ -552,8 +645,7 @@ void menuAluno() {
         printf("3 - Se candidatar\n");
         printf("4 - Minhas selecoes\n");
         printf("0 - Logout\n");
-        printf("Escolha: ");
-        scanf("%d", &opcao);
+        opcao = lerInteiro("Escolha: ", 0, 9);
 
         switch(opcao) {
             case 1:
@@ -602,8 +694,7 @@ void menuAdmin() {
         printf("6 - Remover vaga\n");
         printf("7 - Relatorio geral\n");
         printf("0 - Sair\n");
-        printf("Escolha: ");
-        scanf("%d", &opcao);
+        opcao = lerInteiro("Escolha: ", 0, 9);
 
         switch(opcao) {
             case 1:
@@ -690,8 +781,7 @@ void removerUsuarioAdmin() {
     int encontrou = 0;
 
     printf("\n===== REMOVER USUARIO =====\n");
-    printf("Digite o email do usuario que deseja remover: ");
-    scanf("%49s", email);
+    lerTextoObrigatorio("Digite o email do usuario que deseja remover: ", email, 50);
 
     if(usuarioLogado != -1 && strcmp(usuarios[usuarioLogado].email, email) == 0) {
         printf("Voce nao pode remover o proprio usuario logado.\n");
@@ -757,8 +847,7 @@ void removerVagaAdmin() {
     int encontrou = 0;
 
     printf("\n===== REMOVER VAGA =====\n");
-    printf("Digite o ID da vaga que deseja remover: ");
-    scanf("%d", &id);
+    id = lerInteiro("Digite o ID da vaga que deseja remover: ", 1, 999999);
 
     for(int i = 0; i < totalVagas; i++) {
         if(vagas[i].id == id) {
@@ -878,24 +967,15 @@ void criarVaga() {
 
     strcpy(vagas[totalVagas].empresaEmail, usuarios[usuarioLogado].email);
 
-    printf("Titulo da vaga: ");
-    scanf(" %79[^\n]", vagas[totalVagas].titulo);
+    lerTextoObrigatorio("Titulo da vaga: ", vagas[totalVagas].titulo, 80);
 
-    printf("Area da vaga: ");
-    scanf(" %49[^\n]", vagas[totalVagas].area);
+    lerTextoObrigatorio("Area da vaga: ", vagas[totalVagas].area, 50);
 
-    printf("Descricao da vaga: ");
-    scanf(" %199[^\n]", vagas[totalVagas].descricao);
+    lerTextoObrigatorio("Descricao da vaga: ", vagas[totalVagas].descricao, 200);
 
-    printf("Requisitos da vaga: ");
-    scanf(" %199[^\n]", vagas[totalVagas].requisitos);
+    lerTextoObrigatorio("Requisitos da vaga: ", vagas[totalVagas].requisitos, 200);
 
-    printf("Quantas pessoas voce esta buscando para esta vaga: ");
-    scanf("%d", &vagas[totalVagas].vagasTotais);
-
-    if(vagas[totalVagas].vagasTotais <= 0) {
-        vagas[totalVagas].vagasTotais = 1;
-    }
+    vagas[totalVagas].vagasTotais = lerInteiro("Quantas pessoas voce esta buscando para esta vaga: ", 1, 100);
 
     vagas[totalVagas].vagasPreenchidas = 0;
     vagas[totalVagas].ativa = 1;
@@ -945,8 +1025,7 @@ void buscarVagas() {
     char areaBusca[50];
     int encontrou = 0;
 
-    printf("Digite a area desejada: ");
-    scanf(" %49[^\n]", areaBusca);
+    lerTextoObrigatorio("Digite a area desejada: ", areaBusca, 50);
 
     barraCarregamento("Buscando vagas");
 
@@ -979,6 +1058,50 @@ int vagaExiste(int idVaga) {
     }
 
     return 0;
+}
+
+
+void executarTestes() {
+    limparTela();
+
+    printf("\n===== TESTES DO SISTEMA =====\n");
+
+    printf("\nTeste 1 - Email valido com @ e ponto: ");
+    if(validarEmail("teste@email.com")) {
+        printf("PASSOU\n");
+    } else {
+        printf("FALHOU\n");
+    }
+
+    printf("Teste 2 - Email sem @ deve falhar: ");
+    if(!validarEmail("testeemail.com")) {
+        printf("PASSOU\n");
+    } else {
+        printf("FALHOU\n");
+    }
+
+    printf("Teste 3 - Email sem ponto deve falhar: ");
+    if(!validarEmail("teste@email")) {
+        printf("PASSOU\n");
+    } else {
+        printf("FALHOU\n");
+    }
+
+    printf("Teste 4 - Vaga inexistente deve falhar: ");
+    if(!vagaExiste(999999)) {
+        printf("PASSOU\n");
+    } else {
+        printf("FALHOU\n");
+    }
+
+    printf("Teste 5 - Candidatura inexistente deve falhar: ");
+    if(!jaCandidatado(999999, "aluno@email.com")) {
+        printf("PASSOU\n");
+    } else {
+        printf("FALHOU\n");
+    }
+
+    printf("\n===== FIM DOS TESTES =====\n");
 }
 
 // ===== CANDIDATURAS =====
@@ -1014,8 +1137,7 @@ void candidatarAluno() {
 
     limparTela();
 
-    printf("\nDigite o ID da vaga desejada: ");
-    scanf("%d", &idVaga);
+    idVaga = lerInteiro("\nDigite o ID da vaga desejada: ", 1, 999999);
 
     if(!vagaExiste(idVaga)) {
         printf("Vaga inexistente ou inativa.\n");
@@ -1075,8 +1197,7 @@ void verCandidatos() {
         return;
     }
 
-    printf("\nDigite o ID da vaga para ver candidatos: ");
-    scanf("%d", &idVaga);
+    idVaga = lerInteiro("\nDigite o ID da vaga para ver candidatos: ", 1, 999999);
 
     int vagaValida = 0;
 
@@ -1151,8 +1272,7 @@ void selecionarCandidato() {
         return;
     }
 
-    printf("\nDigite o ID da vaga para selecionar candidatos: ");
-    scanf("%d", &idVaga);
+    idVaga = lerInteiro("\nDigite o ID da vaga para selecionar candidatos: ", 1, 999999);
 
     int indiceVaga = -1;
 
@@ -1207,7 +1327,7 @@ void selecionarCandidato() {
         printf("\nAinda faltam %d vaga(s). Digite o ID da candidatura (0 para parar): ", restam);
 
         int idCandidatura;
-        scanf("%d", &idCandidatura);
+        idCandidatura = lerInteiro("", 0, 999999);
 
         if(idCandidatura == 0) break;
 
