@@ -1,6 +1,3 @@
-Atualizei o README conforme o código atual: ele usa **arquivos `.txt`**, possui **admin**, **edição/exclusão de vagas**, **seleção de candidatos**, **relatório geral**, **testes internos** e **barra de carregamento**. 
-
-````markdown
 # 📚 Portal de Empregos Acadêmico em C
 
 ## 📌 Descrição
