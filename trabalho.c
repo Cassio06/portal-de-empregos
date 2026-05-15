@@ -10,10 +10,10 @@
 #endif
 
 #define MAX 100
-#define ARQUIVO "usuarios.dat"
+#define ARQUIVO "usuarios.txt"
 
-#define ARQUIVO_VAGAS "vagas.dat"
-#define ARQUIVO_CANDIDATURAS "candidaturas.dat"
+#define ARQUIVO_VAGAS "vagas.txt"
+#define ARQUIVO_CANDIDATURAS "candidaturas.txt"
 #define MAX_CANDIDATURAS 300
 
 #define EMPRESA 1
@@ -84,6 +84,8 @@ void relatorioGeral();
 void carregarVagas();
 void salvarVagas();
 void criarVaga();
+void editarVagaEmpresa();
+void excluirVagaEmpresa();
 void listarVagas();
 void buscarVagas();
 int vagaExiste(int idVaga);
@@ -250,34 +252,67 @@ int main() {
 
 // ===== ARQUIVOS =====
 void carregarUsuarios() {
-    FILE *f = fopen(ARQUIVO, "rb");
+    FILE *f = fopen(ARQUIVO, "r");
 
     if(f == NULL) return;
 
-    totalUsuarios = (int)fread(usuarios, sizeof(struct Usuario), MAX, f);
+    totalUsuarios = 0;
+
+    while(totalUsuarios < MAX &&
+          fscanf(f, " %49[^|]|%19[^|]|%d|%49[^|]|%d|%d\n",
+                 usuarios[totalUsuarios].email,
+                 usuarios[totalUsuarios].senha,
+                 &usuarios[totalUsuarios].tipo,
+                 usuarios[totalUsuarios].area,
+                 &usuarios[totalUsuarios].ehExAluno,
+                 &usuarios[totalUsuarios].periodo) == 6) {
+        totalUsuarios++;
+    }
 
     fclose(f);
 }
 
 void salvarUsuarios() {
-    FILE *f = fopen(ARQUIVO, "wb");
+    FILE *f = fopen(ARQUIVO, "w");
 
     if(f == NULL) {
         printf("Erro ao salvar arquivo!\n");
         return;
     }
 
-    fwrite(usuarios, sizeof(struct Usuario), totalUsuarios, f);
+    for(int i = 0; i < totalUsuarios; i++) {
+        fprintf(f, "%s|%s|%d|%s|%d|%d\n",
+                usuarios[i].email,
+                usuarios[i].senha,
+                usuarios[i].tipo,
+                usuarios[i].area,
+                usuarios[i].ehExAluno,
+                usuarios[i].periodo);
+    }
 
     fclose(f);
 }
 
 void carregarVagas() {
-    FILE *f = fopen(ARQUIVO_VAGAS, "rb");
+    FILE *f = fopen(ARQUIVO_VAGAS, "r");
 
     if(f == NULL) return;
 
-    totalVagas = (int)fread(vagas, sizeof(struct Vaga), MAX, f);
+    totalVagas = 0;
+
+    while(totalVagas < MAX &&
+          fscanf(f, " %d|%79[^|]|%49[^|]|%49[^|]|%199[^|]|%199[^|]|%d|%d|%d\n",
+                 &vagas[totalVagas].id,
+                 vagas[totalVagas].titulo,
+                 vagas[totalVagas].empresaEmail,
+                 vagas[totalVagas].area,
+                 vagas[totalVagas].descricao,
+                 vagas[totalVagas].requisitos,
+                 &vagas[totalVagas].ativa,
+                 &vagas[totalVagas].vagasTotais,
+                 &vagas[totalVagas].vagasPreenchidas) == 9) {
+        totalVagas++;
+    }
 
     fclose(f);
 
@@ -291,24 +326,44 @@ void carregarVagas() {
 }
 
 void salvarVagas() {
-    FILE *f = fopen(ARQUIVO_VAGAS, "wb");
+    FILE *f = fopen(ARQUIVO_VAGAS, "w");
 
     if(f == NULL) {
         printf("Erro ao salvar vagas!\n");
         return;
     }
 
-    fwrite(vagas, sizeof(struct Vaga), totalVagas, f);
+    for(int i = 0; i < totalVagas; i++) {
+        fprintf(f, "%d|%s|%s|%s|%s|%s|%d|%d|%d\n",
+                vagas[i].id,
+                vagas[i].titulo,
+                vagas[i].empresaEmail,
+                vagas[i].area,
+                vagas[i].descricao,
+                vagas[i].requisitos,
+                vagas[i].ativa,
+                vagas[i].vagasTotais,
+                vagas[i].vagasPreenchidas);
+    }
 
     fclose(f);
 }
 
 void carregarCandidaturas() {
-    FILE *f = fopen(ARQUIVO_CANDIDATURAS, "rb");
+    FILE *f = fopen(ARQUIVO_CANDIDATURAS, "r");
 
     if(f == NULL) return;
 
-    totalCandidaturas = (int)fread(candidaturas, sizeof(struct Candidatura), MAX_CANDIDATURAS, f);
+    totalCandidaturas = 0;
+
+    while(totalCandidaturas < MAX_CANDIDATURAS &&
+          fscanf(f, " %d|%d|%49[^|]|%29[^\n]\n",
+                 &candidaturas[totalCandidaturas].id,
+                 &candidaturas[totalCandidaturas].idVaga,
+                 candidaturas[totalCandidaturas].alunoEmail,
+                 candidaturas[totalCandidaturas].status) == 4) {
+        totalCandidaturas++;
+    }
 
     fclose(f);
 
@@ -322,14 +377,20 @@ void carregarCandidaturas() {
 }
 
 void salvarCandidaturas() {
-    FILE *f = fopen(ARQUIVO_CANDIDATURAS, "wb");
+    FILE *f = fopen(ARQUIVO_CANDIDATURAS, "w");
 
     if(f == NULL) {
         printf("Erro ao salvar candidaturas!\n");
         return;
     }
 
-    fwrite(candidaturas, sizeof(struct Candidatura), totalCandidaturas, f);
+    for(int i = 0; i < totalCandidaturas; i++) {
+        fprintf(f, "%d|%d|%s|%s\n",
+                candidaturas[i].id,
+                candidaturas[i].idVaga,
+                candidaturas[i].alunoEmail,
+                candidaturas[i].status);
+    }
 
     fclose(f);
 }
@@ -598,6 +659,8 @@ void menuEmpresa() {
         printf("2 - Listar vagas\n");
         printf("3 - Ver candidatos\n");
         printf("4 - Selecionar candidato\n");
+        printf("5 - Editar vaga\n");
+        printf("6 - Excluir vaga\n");
         printf("0 - Logout\n");
         opcao = lerInteiro("Escolha: ", 0, 9);
 
@@ -616,6 +679,14 @@ void menuEmpresa() {
 
             case 4:
                 selecionarCandidato();
+                break;
+
+            case 5:
+                editarVagaEmpresa();
+                break;
+
+            case 6:
+                excluirVagaEmpresa();
                 break;
 
             case 0:
@@ -986,6 +1057,162 @@ void criarVaga() {
     salvarVagas();
 
     printf("Vaga cadastrada com sucesso!\n");
+    esperar(1200);
+}
+
+
+void editarVagaEmpresa() {
+    limparTela();
+
+    int idVaga;
+    int indiceVaga = -1;
+    int encontrouVaga = 0;
+
+    if(usuarioLogado == -1 || usuarios[usuarioLogado].tipo != EMPRESA) {
+        printf("Apenas empresas podem editar vagas.\n");
+        esperar(1200);
+        return;
+    }
+
+    printf("\n===== EDITAR VAGA =====\n");
+    printf("\nSuas vagas ativas:\n");
+
+    for(int i = 0; i < totalVagas; i++) {
+        if(strcmp(vagas[i].empresaEmail, usuarios[usuarioLogado].email) == 0 &&
+           vagas[i].ativa == 1) {
+            printf("ID: %d | Titulo: %s | Vagas: %d/%d preenchidas\n",
+                   vagas[i].id,
+                   vagas[i].titulo,
+                   vagas[i].vagasPreenchidas,
+                   vagas[i].vagasTotais);
+            encontrouVaga = 1;
+        }
+    }
+
+    if(!encontrouVaga) {
+        printf("Voce ainda nao possui vagas ativas para editar.\n");
+        esperar(1500);
+        return;
+    }
+
+    idVaga = lerInteiro("\nDigite o ID da vaga que deseja editar: ", 1, 999999);
+
+    for(int i = 0; i < totalVagas; i++) {
+        if(vagas[i].id == idVaga &&
+           strcmp(vagas[i].empresaEmail, usuarios[usuarioLogado].email) == 0 &&
+           vagas[i].ativa == 1) {
+            indiceVaga = i;
+            break;
+        }
+    }
+
+    if(indiceVaga == -1) {
+        printf("Vaga invalida, inativa ou nao pertence a sua empresa.\n");
+        esperar(1500);
+        return;
+    }
+
+    printf("\nDados atuais da vaga:\n");
+    printf("Titulo: %s\n", vagas[indiceVaga].titulo);
+    printf("Area: %s\n", vagas[indiceVaga].area);
+    printf("Descricao: %s\n", vagas[indiceVaga].descricao);
+    printf("Requisitos: %s\n", vagas[indiceVaga].requisitos);
+    printf("Vagas preenchidas: %d/%d\n", vagas[indiceVaga].vagasPreenchidas, vagas[indiceVaga].vagasTotais);
+
+    printf("\nDigite os novos dados da vaga:\n");
+
+    lerTextoObrigatorio("Novo titulo da vaga: ", vagas[indiceVaga].titulo, 80);
+    lerTextoObrigatorio("Nova area da vaga: ", vagas[indiceVaga].area, 50);
+    lerTextoObrigatorio("Nova descricao da vaga: ", vagas[indiceVaga].descricao, 200);
+    lerTextoObrigatorio("Novos requisitos da vaga: ", vagas[indiceVaga].requisitos, 200);
+
+    vagas[indiceVaga].vagasTotais = lerInteiro("Nova quantidade total de vagas: ", vagas[indiceVaga].vagasPreenchidas, 100);
+
+    barraCarregamento("Atualizando vaga");
+
+    salvarVagas();
+
+    printf("Vaga editada com sucesso!\n");
+    esperar(1200);
+}
+
+void excluirVagaEmpresa() {
+    limparTela();
+
+    int idVaga;
+    int indiceVaga = -1;
+    int encontrouVaga = 0;
+    int confirmacao;
+
+    if(usuarioLogado == -1 || usuarios[usuarioLogado].tipo != EMPRESA) {
+        printf("Apenas empresas podem excluir vagas.\n");
+        esperar(1200);
+        return;
+    }
+
+    printf("\n===== EXCLUIR VAGA =====\n");
+    printf("\nSuas vagas ativas:\n");
+
+    for(int i = 0; i < totalVagas; i++) {
+        if(strcmp(vagas[i].empresaEmail, usuarios[usuarioLogado].email) == 0 &&
+           vagas[i].ativa == 1) {
+            printf("ID: %d | Titulo: %s | Vagas: %d/%d preenchidas\n",
+                   vagas[i].id,
+                   vagas[i].titulo,
+                   vagas[i].vagasPreenchidas,
+                   vagas[i].vagasTotais);
+            encontrouVaga = 1;
+        }
+    }
+
+    if(!encontrouVaga) {
+        printf("Voce ainda nao possui vagas ativas para excluir.\n");
+        esperar(1500);
+        return;
+    }
+
+    idVaga = lerInteiro("\nDigite o ID da vaga que deseja excluir: ", 1, 999999);
+
+    for(int i = 0; i < totalVagas; i++) {
+        if(vagas[i].id == idVaga &&
+           strcmp(vagas[i].empresaEmail, usuarios[usuarioLogado].email) == 0 &&
+           vagas[i].ativa == 1) {
+            indiceVaga = i;
+            break;
+        }
+    }
+
+    if(indiceVaga == -1) {
+        printf("Vaga invalida, inativa ou nao pertence a sua empresa.\n");
+        esperar(1500);
+        return;
+    }
+
+    printf("\nVaga selecionada: %s\n", vagas[indiceVaga].titulo);
+    printf("Essa acao ira desativar a vaga e marcar candidaturas pendentes como Nao Selecionado.\n");
+    confirmacao = lerInteiro("Confirmar exclusao? 1 - Sim | 2 - Nao: ", 1, 2);
+
+    if(confirmacao == 2) {
+        printf("Exclusao cancelada.\n");
+        esperar(1200);
+        return;
+    }
+
+    vagas[indiceVaga].ativa = 0;
+
+    for(int i = 0; i < totalCandidaturas; i++) {
+        if(candidaturas[i].idVaga == idVaga &&
+           strcmp(candidaturas[i].status, "Enviada") == 0) {
+            strcpy(candidaturas[i].status, "Nao Selecionado");
+        }
+    }
+
+    barraCarregamento("Excluindo vaga");
+
+    salvarVagas();
+    salvarCandidaturas();
+
+    printf("Vaga excluida/desativada com sucesso!\n");
     esperar(1200);
 }
 

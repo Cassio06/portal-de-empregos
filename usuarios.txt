@@ -1,0 +1,1 @@
+admin|admin123|3|Administrador|-1|-1
