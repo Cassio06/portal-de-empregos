@@ -1,3 +1,6 @@
 *.exe
 *.dat
 output/
+usuarios.txt
+vagas.txt
+candidaturas.txt
